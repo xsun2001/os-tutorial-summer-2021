@@ -11,8 +11,6 @@ struct Person {
     age: usize,
 }
 
-// I AM NOT DONE
-
 // Steps:
 // 1. If the length of the provided string is 0, an error should be returned
 // 2. Split the given string on the commas present in it
@@ -23,9 +21,38 @@ struct Person {
 // 5. If while extracting the name and the age something goes wrong, an error should be returned
 // If everything goes well, then return a Result of a Person object
 
+#[derive(Debug)]
+struct PersonParseError;
+
+impl std::fmt::Display for PersonParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "PersonParseError")
+    }
+}
+
+impl error::Error for PersonParseError {}
+
+macro_rules! failed {
+    () => {return Err(Box::new(PersonParseError {}))};
+}
+
 impl FromStr for Person {
     type Err = Box<dyn error::Error>;
     fn from_str(s: &str) -> Result<Person, Self::Err> {
+        let mut parts = s.split(',');
+        let name = match parts.next().map(String::from) {
+            Some(str) if str.len() == 0 => failed!(),
+            None => failed!(),
+            Some(str) => str
+        };
+        let age = match parts.next().and_then(|str| str.parse::<usize>().ok()) {
+            Some(num) => num,
+            None => failed!()
+        };
+        match parts.next() {
+            Some(_) => failed!(),
+            None => Ok(Person { name, age })
+        }
     }
 }
 
@@ -42,6 +69,7 @@ mod tests {
     fn empty_input() {
         assert!("".parse::<Person>().is_err());
     }
+
     #[test]
     fn good_input() {
         let p = "John,32".parse::<Person>();
@@ -50,6 +78,7 @@ mod tests {
         assert_eq!(p.name, "John");
         assert_eq!(p.age, 32);
     }
+
     #[test]
     fn missing_age() {
         assert!("John,".parse::<Person>().is_err());

@@ -12,8 +12,6 @@ struct Color {
     blue: u8,
 }
 
-// I AM NOT DONE
-
 // Your task is to complete this implementation
 // and return an Ok result of inner type Color.
 // You need to create an implementation for a tuple of three integers,
@@ -23,22 +21,61 @@ struct Color {
 // but the slice implementation needs to check the slice length!
 // Also note that correct RGB color values must be integers in the 0..=255 range.
 
+#[derive(Debug)]
+struct ColorFormatError;
+
+impl std::fmt::Display for ColorFormatError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "ColorFormatError")
+    }
+}
+
+impl error::Error for ColorFormatError {}
+
+macro_rules! check_or_return {
+    ($val: expr) => {match $val {
+                x if x >= 0 && x <= 255 => x as u8,
+                _ => return Err(Box::new(ColorFormatError {}))
+            }};
+}
+
 // Tuple implementation
 impl TryFrom<(i16, i16, i16)> for Color {
     type Error = Box<dyn error::Error>;
-    fn try_from(tuple: (i16, i16, i16)) -> Result<Self, Self::Error> {}
+    fn try_from(tuple: (i16, i16, i16)) -> Result<Self, Self::Error> {
+        Ok(Color {
+            red: check_or_return!(tuple.0),
+            green: check_or_return!(tuple.1),
+            blue: check_or_return!(tuple.2),
+        })
+    }
 }
 
 // Array implementation
 impl TryFrom<[i16; 3]> for Color {
     type Error = Box<dyn error::Error>;
-    fn try_from(arr: [i16; 3]) -> Result<Self, Self::Error> {}
+    fn try_from(arr: [i16; 3]) -> Result<Self, Self::Error> {
+        Ok(Color {
+            red: check_or_return!(arr[0]),
+            green: check_or_return!(arr[1]),
+            blue: check_or_return!(arr[2]),
+        })
+    }
 }
 
 // Slice implementation
 impl TryFrom<&[i16]> for Color {
     type Error = Box<dyn error::Error>;
-    fn try_from(slice: &[i16]) -> Result<Self, Self::Error> {}
+    fn try_from(slice: &[i16]) -> Result<Self, Self::Error> {
+        match slice.len() {
+            3 => Ok(Color {
+                red: check_or_return!(slice[0]),
+                green: check_or_return!(slice[1]),
+                blue: check_or_return!(slice[2]),
+            }),
+            _ => Err(Box::new(ColorFormatError {}))
+        }
+    }
 }
 
 fn main() {
@@ -67,14 +104,17 @@ mod tests {
     fn test_tuple_out_of_range_positive() {
         assert!(Color::try_from((256, 1000, 10000)).is_err());
     }
+
     #[test]
     fn test_tuple_out_of_range_negative() {
         assert!(Color::try_from((-1, -10, -256)).is_err());
     }
+
     #[test]
     fn test_tuple_sum() {
         assert!(Color::try_from((-1, 255, 255)).is_err());
     }
+
     #[test]
     fn test_tuple_correct() {
         let c: Result<Color, _> = (183, 65, 14).try_into();
@@ -84,25 +124,29 @@ mod tests {
             Color {
                 red: 183,
                 green: 65,
-                blue: 14
+                blue: 14,
             }
         );
     }
+
     #[test]
     fn test_array_out_of_range_positive() {
         let c: Result<Color, _> = [1000, 10000, 256].try_into();
         assert!(c.is_err());
     }
+
     #[test]
     fn test_array_out_of_range_negative() {
         let c: Result<Color, _> = [-10, -256, -1].try_into();
         assert!(c.is_err());
     }
+
     #[test]
     fn test_array_sum() {
         let c: Result<Color, _> = [-1, 255, 255].try_into();
         assert!(c.is_err());
     }
+
     #[test]
     fn test_array_correct() {
         let c: Result<Color, _> = [183, 65, 14].try_into();
@@ -112,25 +156,29 @@ mod tests {
             Color {
                 red: 183,
                 green: 65,
-                blue: 14
+                blue: 14,
             }
         );
     }
+
     #[test]
     fn test_slice_out_of_range_positive() {
         let arr = [10000, 256, 1000];
         assert!(Color::try_from(&arr[..]).is_err());
     }
+
     #[test]
     fn test_slice_out_of_range_negative() {
         let arr = [-256, -1, -10];
         assert!(Color::try_from(&arr[..]).is_err());
     }
+
     #[test]
     fn test_slice_sum() {
         let arr = [-1, 255, 255];
         assert!(Color::try_from(&arr[..]).is_err());
     }
+
     #[test]
     fn test_slice_correct() {
         let v = vec![183, 65, 14];
@@ -141,15 +189,17 @@ mod tests {
             Color {
                 red: 183,
                 green: 65,
-                blue: 14
+                blue: 14,
             }
         );
     }
+
     #[test]
     fn test_slice_excess_length() {
         let v = vec![0, 0, 0, 0];
         assert!(Color::try_from(&v[..]).is_err());
     }
+
     #[test]
     fn test_slice_insufficient_length() {
         let v = vec![0, 0];
